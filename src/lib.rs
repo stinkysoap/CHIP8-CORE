@@ -1,4 +1,4 @@
-use std::fmt::Formatter;
+use std::{fmt::Formatter, thread::sleep};
 
 pub const SCREEN_WIDTH: usize = 64;
 pub const SCREEN_HEIGHT: usize = 32;
@@ -67,6 +67,64 @@ impl Emu {
         let digit3 = (op & 0x00F0) >> 4;
         let digit4 = op & 0x000F;
         match (digit1, digit2, digit3, digit4) {
+            (0, 0, 0, 0) => return,
+            (0, 0, 0xE, 0) => self.screen = [false; SCREEN_HEIGHT * SCREEN_WIDTH],
+            (0, 0, 0xE, 0xE) => {
+                self.pc = self.pop();
+            }
+            (1, _, _, _) => {
+                let nnn = op & 0xFFF;
+                self.pc = nnn;
+            }
+            (2, _, _, _) => {
+                let nnn = op & 0xFFF;
+                self.push(self.pc);
+                self.pc = nnn;
+            }
+            (3, _, _, _) => {
+                let x = digit2 as usize;
+                let nn = (op & 0xFF) as u8;
+                if self.v_reg[x] == nn {
+                    self.pc += 2;
+                }
+            }
+            (4, _, _, _) => {
+                let x = digit2 as usize;
+                let nn = (op & 0xFF) as u8;
+                if self.v_reg[x] != nn {
+                    self.pc += 2;
+                }
+            }
+            (5, _, _, 0) => {
+                let x = digit2 as usize;
+                let y = digit3 as usize;
+                if self.v_reg[x] == self.v_reg[y] {
+                    self.pc += 2;
+                }
+            }
+            (6, _, _, _) => {
+                let x = digit2 as usize;
+                let nn = (0xFF & op) as u8;
+                self.v_reg[x] = nn;
+            }
+            (7, _, _, _) => {
+                let x = digit2 as usize;
+                let nn = (0xFF & op) as u8;
+                self.v_reg[x] = self.v_reg[x].wrapping_add(nn);
+            }
+            (8, _, _, 0) => {
+                let x = digit2 as usize;
+                let y = digit3 as usize;
+                self.v_reg[x] = self.v_reg[y];
+            }
+            (8, _, _, 4) => {
+                let x = digit2 as usize;
+                let y = digit3 as usize;
+                let (new_vx, carry) = self.v_reg[x].overflowing_add(self.v_reg[y]);
+                let new_vf = if carry { 1 } else { 0 };
+                self.v_reg[x] = new_vx;
+                self.v_reg[0xF] = new_vf;
+            }
             (_, _, _, _) => unimplemented!("unimplemented opcode:{}", op),
         }
     }
