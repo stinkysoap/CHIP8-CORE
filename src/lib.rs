@@ -55,7 +55,7 @@ impl Emu {
         self.i_reg = 0;
         self.sp = 0;
         self.dt = 0;
-        self.ram[..FONTSET_SIZE].copy_froidxm_slice(&FONTSET);
+        self.ram[..FONTSET_SIZE].copy_from_slice(&FONTSET);
     }
     pub fn tick(&mut self) {
         let op = self.fetch();
@@ -249,6 +249,25 @@ impl Emu {
                 let x = digit2 as usize;
                 let c = self.v_reg[x] as u16;
                 self.i_reg = c * 5;
+            }
+            (0xF, _, 3, 3) => {
+                ///  This piece of code is converting our data to a BCD stored in i_reg and its
+                ///  following spaces
+                let x = digit2 as usize;
+                let vx = self.v_reg[x] as f32;
+                let hundreds = (vx / 100.0).floor() as u8;
+                let tens = ((vx / 10.0) % 10.0).floor() as u8;
+                let ones = (vx % 10.0) as u8;
+                self.ram[self.i_reg as usize] = hundreds;
+                self.ram[(self.i_reg + 1) as usize] = tens;
+                self.ram[(self.i_reg + 2) as usize] = ones;
+            }
+            (0xF, _, 5, 5) => {
+                let x = digit2 as usize;
+                let i = self.i_reg as usize;
+                for idx in 0..x {
+                    self.ram[i + idx] = self.v_reg[idx];
+                }
             }
             (_, _, _, _) => unimplemented!("unimplemented opcode:{}", op),
         }
