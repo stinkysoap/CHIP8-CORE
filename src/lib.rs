@@ -103,6 +103,7 @@ impl Emu {
                 }
             }
             (6, _, _, _) => {
+                // Fetch the hundreds digit by dividing by 100 and tossing the decimal
                 let x = digit2 as usize;
                 let nn = (0xFF & op) as u8;
                 self.v_reg[x] = nn;
@@ -265,8 +266,15 @@ impl Emu {
             (0xF, _, 5, 5) => {
                 let x = digit2 as usize;
                 let i = self.i_reg as usize;
-                for idx in 0..x {
+                for idx in 0..=x {
                     self.ram[i + idx] = self.v_reg[idx];
+                }
+            }
+            (0xF, _, 6, 5) => {
+                let x = digit2 as usize;
+                let i = self.i_reg as usize;
+                for idx in 0..=x {
+                    self.v_reg[idx] = self.ram[i + idx];
                 }
             }
             (_, _, _, _) => unimplemented!("unimplemented opcode:{}", op),
